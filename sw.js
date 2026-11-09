@@ -1,4 +1,4 @@
-const V='percha-v2';
+const V='percha-v3';
 const CORE=['./','index.html','manifest.json','icon-192.png','icon-512.png','models/avatar.glb'];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',

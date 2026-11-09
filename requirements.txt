@@ -4,3 +4,7 @@ python-multipart
 rembg[cpu]
 pillow
 numpy
+
+# opcional, para CLASSIFY=1 (categoría/patrón/tela automáticos):
+# transformers
+# torch

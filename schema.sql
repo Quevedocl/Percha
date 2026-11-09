@@ -29,3 +29,6 @@ create policy "garments_files_insert" on storage.objects for insert to authentic
   with check (bucket_id = 'garments' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "garments_files_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'garments' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+-- Metadatos de IA
+alter table public.garments add column if not exists pattern text, add column if not exists fabric text;

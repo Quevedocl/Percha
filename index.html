@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ebe5db">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Percha">
 <title>Percha · Probador virtual</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -74,6 +76,11 @@ canvas{width:100%;height:100%;display:block}
 .card2 input{width:100%;margin:12px 0;border:0;border-radius:12px;background:var(--tile);color:var(--ink);padding:14px;font:inherit;font-size:15px}
 .card2 .cta{width:100%}.card2 p{font-size:12.5px;color:var(--muted);margin:10px 2px 0}
 .cta.ghost{background:var(--tile);color:var(--ink)}
+.srch{width:100%;border:0;border-radius:12px;background:var(--tile);color:var(--ink);padding:10px 12px;font:inherit;font-size:14px;margin:0 0 10px}
+.row{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--hair);font-size:14px}.row b{flex:1;font-weight:500}.row button{padding:6px 10px;border-radius:10px;background:var(--tile);font-size:13px}
+.sl{display:block;font-size:13px;color:var(--muted);margin:12px 2px 0}.card2 input[type=range]{padding:0;margin:6px 0}.card2 input[type=color]{height:42px;padding:3px;margin:6px 0}
+.card2{max-height:88vh;overflow:auto}
+.pend{position:absolute;top:8px;left:8px;width:9px;height:9px;border-radius:50%;background:#e0a030}
 :focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:8px}
 /* Tablet: panel lateral fijo, avatar grande */
 @media (min-width:760px){
@@ -95,7 +102,8 @@ canvas{width:100%;height:100%;display:block}
     <div class="top">
       <div class="brand"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a2 2 0 1 0-2-2"/><path d="M12 8v2l9 5.5a1.2 1.2 0 0 1-.6 2.2H3.6A1.2 1.2 0 0 1 3 15.5L12 10"/></svg></span>Percha</div>
       <div class="tools">
-        <button class="ibtn glass" type="button" aria-label="Outfits guardados"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4-6 4z"/></svg></button>
+        <button class="ibtn glass" id="outBtn" type="button" aria-label="Looks guardados"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4-6 4z"/></svg></button>
+        <button class="ibtn glass" id="meBtn" type="button" aria-label="Mi cuerpo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 8v6M8 10h8M9 21l3-7 3 7"/></svg></button>
         <button class="ibtn glass" id="acctBtn" type="button" aria-label="Cuenta y medidas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/></svg></button>
       </div>
     </div>
@@ -107,6 +115,7 @@ canvas{width:100%;height:100%;display:block}
     <button class="grab" id="grab" type="button" aria-label="Mostrar u ocultar armario"><i></i></button>
     <div class="fold">
       <div class="head"><h1>Armario<small id="count"></small></h1><button class="link" id="clear" type="button">Quitar todo</button></div>
+      <input class="srch" id="q" type="search" placeholder="Buscar: chaquetas negras, ropa de invierno…" aria-label="Buscar prendas">
       <div class="tabs" id="tabs" role="tablist"></div>
     </div>
     <div class="list fold" id="list"></div>
@@ -116,6 +125,7 @@ canvas{width:100%;height:100%;display:block}
     </div>
     <div class="act">
       <button class="sq" id="cam" type="button" aria-label="Agregar prenda"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button class="sq" id="shareBtn" type="button" aria-label="Compartir outfit"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button>
       <button class="cta" id="go" type="button">Probar ahora</button>
     </div>
   </section>
@@ -138,6 +148,17 @@ canvas{width:100%;height:100%;display:block}
   <button class="cta" id="acctIn" type="button">Enviar enlace de acceso</button>
   <button class="cta ghost" id="acctOut" type="button">Cerrar sesión</button>
 </div></div>
+<div class="add" id="outs"><div class="card2 glass"><h2>Mis looks</h2>
+  <input type="text" id="outName" maxlength="30" placeholder="Nombre (ej. Entrevista de trabajo)" aria-label="Nombre del look">
+  <button class="cta" id="outSave" type="button">Guardar look actual</button>
+  <button class="cta ghost" id="outSug" type="button" style="margin-top:8px">Sugerir un look</button>
+  <p id="outNote" role="status"></p><div id="outList"></div></div></div>
+<div class="add" id="me"><div class="card2 glass"><h2>Mi cuerpo</h2>
+  <label class="sl" for="meH">Altura: <span id="meHT"></span></label><input type="range" id="meH" min="140" max="205">
+  <label class="sl" for="meW">Peso: <span id="meWT"></span></label><input type="range" id="meW" min="40" max="130">
+  <label class="sl" for="meSk">Tono de piel</label><input type="color" id="meSk">
+  <label class="sl" for="meHr">Color de cabello</label><input type="color" id="meHr">
+  <p>El avatar se ajusta en tiempo real y queda guardado en este dispositivo.</p></div></div>
 <input type="file" accept="image/*" capture="environment" id="fCam" hidden>
 <input type="file" accept="image/*" id="fGal" hidden>
 
@@ -157,9 +178,9 @@ const sel=new Set();let cat='Todo',applied=0;
 
 /* ---------- Armario ---------- */
 function drawTabs(){const t=$('tabs');t.innerHTML='';CATS.forEach(c=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.textContent=c;b.setAttribute('aria-selected',c===cat);if(c===cat)b.className='on';b.onclick=()=>{cat=c;drawTabs();drawList()};t.appendChild(b)})}
-function drawList(){const l=$('list');l.innerHTML='';const v=ITEMS.filter(i=>cat==='Todo'||i.cat===cat);$('count').textContent=v.length+(v.length===1?' prenda':' prendas');
+function drawList(){const l=$('list');l.innerHTML='';const v=ITEMS.filter(i=>(cat==='Todo'||i.cat===cat)&&match(i));$('count').textContent=v.length+(v.length===1?' prenda':' prendas');
  v.forEach(i=>{const b=document.createElement('button');b.type='button';b.className='card'+(sel.has(i.id)?' sel':'');b.setAttribute('aria-pressed',sel.has(i.id));
-  b.innerHTML='<div class="pic">'+(i.img?'<img alt="" src="'+i.img+'">':'<svg viewBox="0 0 56 70">'+i.svg+'</svg>')+'</div><b></b>';b.querySelector('b').textContent=i.name;
+  b.innerHTML='<div class="pic">'+(i.pend?'<i class="pend" title="Pendiente de sincronizar"></i>':'')+(i.img?'<img alt="" src="'+i.img+'">':'<svg viewBox="0 0 56 70">'+i.svg+'</svg>')+'</div><b></b>';b.querySelector('b').textContent=i.name;
   b.onclick=()=>{if(sel.has(i.id))sel.delete(i.id);else{ITEMS.forEach(o=>{if(o.cat===i.cat)sel.delete(o.id)});sel.add(i.id)}refresh()};l.appendChild(b)})}
 function drawChips(){const c=$('chips');c.innerHTML='';if(!sel.size){const p=document.createElement('p');p.textContent='Toca las prendas para armar tu outfit.';c.appendChild(p)}
  ITEMS.filter(i=>sel.has(i.id)).forEach(i=>{const b=document.createElement('button');b.type='button';b.className='chip';b.setAttribute('aria-label','Quitar '+i.name);
@@ -202,12 +223,12 @@ function buildGarment(i){const f=FIT[i.cat],c=i.canvas,a=c.width/c.height,H=Math
  const g=new THREE.Group();root.add(g);
  if(f.side){const flat=(x,z,ry,flip)=>{const m=mesh(new THREE.PlaneGeometry(W,H),fabric(tex,0xffffff,THREE.DoubleSide),x,f.y,z);m.rotation.y=ry;if(flip)m.scale.x=-1;g.add(m)};
   if(i.cat==='Calzado')[-1,1].forEach(s=>flat(s*.13,.06,s*Math.PI/2,s<0));else flat(f.x,.02,-Math.PI/2,false);return g}
- const r0=root.rotation.y;root.rotation.y=0;root.updateMatrixWorld(true); // las calcomanías se generan en coordenadas de mundo
+ const r0=root.rotation.y,s0=root.scale.clone();root.rotation.y=0;root.scale.set(1,1,1);root.updateMatrixWorld(true); // las calcomanías se generan en coordenadas de mundo
  try{[1,-1].forEach(sg=>{const ori=new THREE.Euler(0,sg>0?0:Math.PI,0),pos=new THREE.Vector3(0,f.y,sg*.2),size=new THREE.Vector3(W,H,.5);
    targets().forEach(t=>{const geo=new THREE.DecalGeometry(t,pos,ori,size);if(geo.attributes.position.count)g.add(new THREE.Mesh(geo,fabric(tex,sg>0?0xffffff:0xbdbdbd)))})})}
  catch(e){console.warn('Decal falló; uso láminas',e);g.clear()}
  if(!g.children.length)sheets(g,W,H,f,tex);
- root.rotation.y=r0;root.updateMatrixWorld(true);return g}
+ root.rotation.y=r0;root.scale.copy(s0);root.updateMatrixWorld(true);return g}
 const loadImg=u=>new Promise((ok,no)=>{const m=new Image();m.crossOrigin='anonymous';m.onload=()=>ok(m);m.onerror=no;m.src=u});
 async function ensureCanvas(i){if(i.canvas)return;
  const m=await loadImg(i.svg?'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 70" width="280" height="350">'+i.svg+'</svg>'):i.src);
@@ -223,8 +244,17 @@ async function applyOutfit(){const list=ITEMS.filter(i=>sel.has(i.id));
  const ld=new THREE.GLTFLoader();ld.setDRACOLoader(dr);
  ld.load(CFG.AVATAR_URL,gl=>{const m=gl.scene;m.scale.setScalar(CFG.AVATAR_HEIGHT/new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()).y);
   const b=new THREE.Box3().setFromObject(m),c=b.getCenter(new THREE.Vector3());m.position.set(-c.x,-b.min.y,-c.z);
-  root.add(m);m.updateMatrixWorld(true);avatar.glb=m;body.visible=false;
+  root.add(m);m.updateMatrixWorld(true);avatar.glb=m;body.visible=false;if(gl.animations&&gl.animations.length){mixer=new THREE.AnimationMixer(m);mixer.clipAction(gl.animations[0]).play()}applyProfile();
   ITEMS.forEach(i=>{if(i.mesh){root.remove(i.mesh);i.mesh=null}});applyOutfit()},undefined,()=>console.info('Sin .glb en '+CFG.AVATAR_URL+': avatar procedural'))}
+
+/* ---------- Perfil corporal, piel, cabello y respiración (idle) ---------- */
+const clock=new THREE.Clock();let mixer=null,breath=0,baseS=[1,1,1];
+const PROF=Object.assign({h:170,w:65,skin:'#c99a7a',hair:'#7a5238'},(()=>{try{return JSON.parse(localStorage.getItem('percha.prof')||'{}')}catch(e){return{}}})());
+function applyProfile(){const bmi=PROF.w/Math.pow(PROF.h/100,2),k=Math.min(1.35,Math.max(.8,1+(bmi-22)*.03));
+ baseS=[k,PROF.h/175,k];skin.color.set(PROF.skin);hm.color.set(PROF.hair);
+ if(avatar.glb)avatar.glb.traverse(o=>{if(!o.isMesh)return;[].concat(o.material).forEach(m=>{if(/skin|body|piel/i.test((m.name||'')+o.name))m.color.set(PROF.skin)});
+  const d=o.morphTargetDictionary;if(d)['weight','peso','Weight'].forEach(n=>{if(n in d)o.morphTargetInfluences[d[n]]=Math.min(1,Math.max(0,(bmi-18)/17))})})}
+applyProfile();
 
 /* ---------- Cámara, encuadre y gestos ---------- */
 let rotY=.35,vel=0,drag=false,lastX=0,p0=0,m0=1,zm=1,tgt=null;const ptr=new Map();
@@ -246,7 +276,7 @@ new ResizeObserver(resize).observe(stage);setPR(Math.min(devicePixelRatio,2));
 const T=Math.tan(Math.PI/12);
 (function loop(){requestAnimationFrame(loop);
  if(tgt!==null){rotY+=(tgt-rotY)*.14;if(Math.abs(tgt-rotY)<.002){rotY=tgt;tgt=null}}else if(!drag){rotY+=vel;vel*=.94}
- root.rotation.y=rotY;
+ root.rotation.y=rotY;const dt=clock.getDelta();breath+=dt;if(mixer)mixer.update(dt);const br=mixer?0:Math.sin(breath*1.6)*.006;root.scale.set(baseS[0]*(1+br*1.5),baseS[1]*(1+br*.6),baseS[2]*(1+br*1.5));
  const W=stage.clientWidth,H=stage.clientHeight,sr=stage.getBoundingClientRect(),pr=panel.getBoundingClientRect();
  const top=phone()?108:84,over=phone()?Math.max(0,sr.bottom-pr.top):0,free=Math.max(160,H-over-top);
  const dist=(2.0/(2*T))*(H/free)*zm; // el avatar siempre cabe en el espacio libre
@@ -273,17 +303,17 @@ async function handle(file){
  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
  pending=null;$('addImg').src=c.toDataURL('image/jpeg',.8);$('addName').value='';drawCats();$('add').classList.add('on');
  $('addOk').disabled=true;$('addNote').textContent='Quitando el fondo…';
- let cut,note,color;const origBlob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+ let cut,note,color,meta={},pend=false;const origBlob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
  try{
   const fd=new FormData();fd.append('file',origBlob,'prenda.jpg');
   const res=await fetch(API_URL+'/api/remove-background',{method:'POST',body:fd,signal:AbortSignal.timeout(30000)});
   if(!res.ok)throw new Error((await res.json().catch(()=>({}))).detail||res.status);
-  color=res.headers.get('X-Dominant-Color');const bmp=await createImageBitmap(await res.blob());cut=document.createElement('canvas');cut.width=bmp.width;cut.height=bmp.height;cut.getContext('2d').drawImage(bmp,0,0);
+  color=res.headers.get('X-Dominant-Color');meta={pattern:res.headers.get('X-Pattern')||'',fabric:res.headers.get('X-Fabric')||''};const ac=res.headers.get('X-Category');if(ac&&KEY[ac]){pcat=ac;drawCats()}const bmp=await createImageBitmap(await res.blob());cut=document.createElement('canvas');cut.width=bmp.width;cut.height=bmp.height;cut.getContext('2d').drawImage(bmp,0,0);
   note='Prenda extraída con IA. Revisa el recorte antes de guardar.';
- }catch(e){cut=softCut(c);note='Sin conexión con el servicio de IA: se usó un recorte básico de demostración.'}
+ }catch(e){cut=softCut(c);pend=true;note='Sin conexión con la IA: se guarda con un recorte provisional y se mejorará solo al volver internet.'}
  const out=cropAlpha(cut);
  if(!out){$('addNote').textContent='No se detectó la prenda. Prueba con mejor luz y fondo liso.';return}
- pending={img:out.toDataURL('image/png'),canvas:out,orig:origBlob,color:color||dominant(out)};$('addImg').src=pending.img;$('addNote').textContent=note;$('addOk').disabled=false}
+ pending={img:out.toDataURL('image/png'),canvas:out,orig:origBlob,color:color||dominant(out),meta,pend};$('addImg').src=pending.img;$('addNote').textContent=note;$('addOk').disabled=false}
 /* Respaldo de demo (sin backend): quita el fondo parecido al de las esquinas, desde los bordes */
 function softCut(c){const x=c.getContext('2d'),W=c.width,H=c.height,im=x.getImageData(0,0,W,H),d=im.data;
  const cs=[0,W-1,(H-1)*W,H*W-1],bg=[0,1,2].map(k=>cs.reduce((a,i)=>a+d[i*4+k],0)/4);
@@ -303,26 +333,43 @@ function dominant(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.heigh
 /* ---------- Persistencia: Supabase (nube, multi-dispositivo) o IndexedDB (solo este dispositivo) ---------- */
 const sb=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&window.supabase)?supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
 let user=null;const BUILTIN=ITEMS.length;
-const idb=new Promise(ok=>{try{const r=indexedDB.open('percha',1);r.onupgradeneeded=()=>r.result.createObjectStore('garments',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}catch(e){ok(null)}});
-const tx=async(mode,f)=>{const d=await idb;if(!d)return[];return new Promise(ok=>{const t=d.transaction('garments',mode),r=f(t.objectStore('garments'));t.oncomplete=()=>ok(r.result||[]);t.onerror=()=>ok([])})};
+const idb=new Promise(ok=>{try{const r=indexedDB.open('percha',2);r.onupgradeneeded=()=>{const d=r.result;['garments','outfits','cache'].forEach(n=>d.objectStoreNames.contains(n)||d.createObjectStore(n,{keyPath:'id'}))};r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}catch(e){ok(null)}});
+const tx=async(mode,f,st='garments')=>{const d=await idb;if(!d)return[];return new Promise(ok=>{const t=d.transaction(st,mode),r=f(t.objectStore(st));t.oncomplete=()=>ok(r.result||[]);t.onerror=()=>ok([])})};
+const rowOf=r=>({id:r.id,name:r.name,cat:r.cat,color:r.color,pattern:r.pattern,fabric:r.fabric,src:URL.createObjectURL(r.cut),pend:!!(r.ai||r.up)});
 async function loadWardrobe(){
- ITEMS.slice(BUILTIN).forEach(i=>i.mesh&&root.remove(i.mesh));ITEMS.splice(BUILTIN);let rows=[];
- try{if(sb&&user){const{data,error}=await sb.from('garments').select('*').order('created_at');if(error)throw error;
-   const paths=data.map(r=>r.cut_path),urls=paths.length?(await sb.storage.from('garments').createSignedUrls(paths,3600)).data:[];
-   rows=data.map((r,k)=>({id:r.id,name:r.name,cat:r.category,color:r.dominant_color,src:urls[k]&&urls[k].signedUrl}))}
-  else rows=(await tx('readonly',s=>s.getAll())).map(r=>({id:r.id,name:r.name,cat:r.cat,color:r.color,src:URL.createObjectURL(r.cut)}))}
- catch(e){console.error(e)}
- rows.filter(r=>r.src).forEach(r=>{r.img=r.src;ITEMS.push(r)});sel.clear();refresh();applyOutfit()}
+ ITEMS.slice(BUILTIN).forEach(i=>i.mesh&&root.remove(i.mesh));ITEMS.splice(BUILTIN);
+ const loc=(await tx('readonly',s=>s.getAll())).map(rowOf);let rows=loc;
+ if(sb&&user){let cl;
+  try{if(!navigator.onLine)throw 0;const{data,error}=await sb.from('garments').select('*').order('created_at');if(error)throw error;
+   const urls=data.length?(await sb.storage.from('garments').createSignedUrls(data.map(r=>r.cut_path),3600)).data:[];
+   cl=data.map((r,k)=>({id:r.id,name:r.name,cat:r.category,color:r.dominant_color,pattern:r.pattern,fabric:r.fabric,src:urls[k]&&urls[k].signedUrl}));
+   const have=new Set(await tx('readonly',s=>s.getAllKeys(),'cache'));  /* copia local para verlo sin internet */
+   cl.filter(r=>r.src&&!have.has(r.id)).forEach(async r=>{try{const b=await(await fetch(r.src)).blob();await tx('readwrite',s=>s.put({id:r.id,name:r.name,cat:r.cat,color:r.color,pattern:r.pattern,fabric:r.fabric,cut:b}),'cache')}catch(e){}})}
+  catch(e){cl=(await tx('readonly',s=>s.getAll(),'cache')).map(rowOf)}
+  rows=cl.concat(loc)}
+ rows.filter(r=>r.src).forEach(r=>{r.img=r.src;ITEMS.push(r)});sel.clear();refresh();applyOutfit();syncPending()}
+async function cloudPut(id,p){const bk=sb.storage.from('garments'),dir=user.id+'/'+id;
+ const[a,b]=await Promise.all([bk.upload(dir+'/original.jpg',p.orig,{contentType:'image/jpeg'}),bk.upload(dir+'/cut.png',p.cutBlob,{contentType:'image/png'})]);
+ if(a.error||b.error)throw a.error||b.error;
+ const{error}=await sb.from('garments').insert({id,name:p.name,category:p.cat,original_path:dir+'/original.jpg',cut_path:dir+'/cut.png',dominant_color:p.color,pattern:p.pattern||null,fabric:p.fabric||null});if(error)throw error}
+/* ai=1: falta pasar por la IA · up=1: falta subir a la nube. Se completan solos al volver la conexión */
 async function saveGarment(p){const id=crypto.randomUUID();
- if(sb&&user){const bk=sb.storage.from('garments'),dir=user.id+'/'+id;
-  const[a,b]=await Promise.all([bk.upload(dir+'/original.jpg',p.orig,{contentType:'image/jpeg'}),bk.upload(dir+'/cut.png',p.cutBlob,{contentType:'image/png'})]);
-  if(a.error||b.error)throw a.error||b.error;
-  const{error}=await sb.from('garments').insert({id,name:p.name,category:p.cat,original_path:dir+'/original.jpg',cut_path:dir+'/cut.png',dominant_color:p.color});if(error)throw error}
- else await tx('readwrite',s=>s.put({id,name:p.name,cat:p.cat,color:p.color,cut:p.cutBlob}));
- return id}
+ if(sb&&user&&!p.pend)try{await cloudPut(id,p);return id}catch(e){console.warn('Sin nube: guardo local y sincronizo después',e)}
+ await tx('readwrite',s=>s.put({id,name:p.name,cat:p.cat,color:p.color,pattern:p.pattern,fabric:p.fabric,cut:p.cutBlob,orig:p.orig,ai:p.pend?1:0,up:(sb&&user)?1:0}));return id}
+let syncing=false;
+async function syncPending(){if(syncing||!navigator.onLine)return;syncing=true;let ch=0;
+ try{for(const r of await tx('readonly',s=>s.getAll())){if(!r.ai&&!r.up)continue;
+  if(r.ai)try{const fd=new FormData();fd.append('file',r.orig,'p.jpg');const res=await fetch(API_URL+'/api/remove-background',{method:'POST',body:fd,signal:AbortSignal.timeout(30000)});if(!res.ok)throw 0;
+   r.cut=await res.blob();r.color=res.headers.get('X-Dominant-Color')||r.color;r.pattern=res.headers.get('X-Pattern')||r.pattern;r.fabric=res.headers.get('X-Fabric')||r.fabric;r.ai=0;ch=1}catch(e){continue}
+  let done=false;
+  if(r.up&&sb&&user)try{await cloudPut(r.id,{name:r.name,cat:r.cat,orig:r.orig,cutBlob:r.cut,color:r.color,pattern:r.pattern,fabric:r.fabric});await tx('readwrite',s=>s.delete(r.id));done=true;ch=1}catch(e){}
+  if(!done)await tx('readwrite',s=>s.put(r))}}
+ finally{syncing=false}
+ if(ch)loadWardrobe()}
+addEventListener('online',syncPending);
 $('addOk').onclick=async()=>{if(!pending)return;const p=pending,btn=$('addOk');btn.disabled=true;btn.textContent='Guardando…';
- try{const name=$('addName').value.trim()||'Prenda nueva',cutBlob=await new Promise(r=>p.canvas.toBlob(r,'image/png')),id=await saveGarment({name,cat:pcat,orig:p.orig,cutBlob,color:p.color});
-  ITEMS.push({id,name,cat:pcat,img:p.img,canvas:p.canvas,color:p.color});
+ try{const name=$('addName').value.trim()||'Prenda nueva',cutBlob=await new Promise(r=>p.canvas.toBlob(r,'image/png')),id=await saveGarment({name,cat:pcat,orig:p.orig,cutBlob,color:p.color,pattern:p.meta.pattern,fabric:p.meta.fabric,pend:p.pend});
+  ITEMS.push({id,name,cat:pcat,img:p.img,canvas:p.canvas,color:p.color,pattern:p.meta.pattern,fabric:p.meta.fabric,pend:p.pend});
   $('add').classList.remove('on');cat='Todo';drawTabs();refresh();$('list').scrollTo({left:1e5,top:1e5,behavior:'smooth'})}
  catch(e){console.error(e);$('addNote').textContent='No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.'}
  btn.disabled=false;btn.textContent='Guardar en el armario'};
@@ -340,6 +387,60 @@ $('acctOut').onclick=async()=>{await sb.auth.signOut();acct.classList.remove('on
 if(sb){sb.auth.onAuthStateChange((_e,ses)=>{const u=ses&&ses.user||null;if((u&&u.id)!==(user&&user.id)){user=u;loadWardrobe()}});
  sb.auth.getSession().then(({data})=>{if(!data.session)loadWardrobe()})}else loadWardrobe();
 $('add').addEventListener('click',e=>{if(e.target===$('add'))$('add').classList.remove('on')});
+/* ---------- Color, búsqueda y filtros ---------- */
+function nrm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[aos]+\b/g,'')}
+function hsl(hex){const[r,g,b]=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255),mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;let h=0;if(d){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h=(h*60+360)%360}return{h,s:d?d/(1-Math.abs(2*l-1)):0,l}}
+function cname(hex){if(!hex)return'';const{h,s,l}=hsl(hex);if(l<.14)return'negro';if(l>.9&&s<.3)return'blanco';if(s<.12)return l<.4?'gris oscuro':'gris';if(l>.75&&s<.4&&h<60)return'beige';
+ if(h<15||h>=345)return'rojo';if(h<40)return l<.4?'marron':'naranjo';if(h<70)return l>.6?'amarillo':'mostaza';if(h<165)return'verde';if(h<200)return'turquesa';if(h<255)return'azul';if(h<290)return'morado';return'rosado'}
+function season(i){return(i.cat==='Chaquetas'||/lana|abrigo|polar|invierno|cuero|bufanda/i.test(i.name)?' invierno':'')+(/short|verano|lino|sandalia/i.test(i.name)?' verano':'')}
+function hay(i){return nrm([i.name,i.cat,cname(i.color),i.pattern||'',i.fabric||'',season(i)].join(' '))}
+function match(i){const q=nrm($('q').value.trim());if(!q)return true;const h=hay(i);return q.split(/\s+/).filter(t=>!['rop','de','del','con','y','en'].includes(t)).every(t=>h.includes(t))}
+$('q').oninput=drawList;
+
+/* ---------- Looks guardados ---------- */
+const outs=$('outs');
+function wear(ids){sel.clear();ITEMS.forEach(i=>{if(ids.includes(i.id))sel.add(i.id)});refresh();applyOutfit()}
+async function drawOuts(){const l=$('outList');l.innerHTML='';const all=await tx('readonly',s=>s.getAll(),'outfits');
+ if(!all.length)l.innerHTML='<p>Aún no tienes looks guardados.</p>';
+ all.sort((a,b)=>b.t-a.t).forEach(o=>{const r=document.createElement('div');r.className='row';r.innerHTML='<b></b><button type="button">Probar</button><button type="button" aria-label="Eliminar look">✕</button>';
+  r.firstChild.textContent=o.name+' ('+ITEMS.filter(i=>o.ids.includes(i.id)).length+'/'+o.ids.length+')';
+  r.children[1].onclick=()=>{wear(o.ids);outs.classList.remove('on')};r.children[2].onclick=async()=>{await tx('readwrite',s=>s.delete(o.id),'outfits');drawOuts()};l.appendChild(r)})}
+$('outBtn').onclick=()=>{$('outNote').textContent='';drawOuts();outs.classList.add('on')};
+outs.addEventListener('click',e=>{if(e.target===outs)outs.classList.remove('on')});
+$('outSave').onclick=async()=>{if(!sel.size){$('outNote').textContent='Elige al menos una prenda.';return}
+ await tx('readwrite',s=>s.put({id:crypto.randomUUID(),name:$('outName').value.trim()||'Look '+new Date().toLocaleDateString(),ids:[...sel],t:Date.now()}),'outfits');
+ $('outName').value='';$('outNote').textContent='Look guardado.';drawOuts()};
+
+/* ---------- Recomendación: teoría del color + clima ---------- */
+function harmony(cols){const col=cols.map(c=>({n:cname(c),...hsl(c)})).filter(c=>c.s>.25&&c.l>.14&&c.l<.9&&!['negro','blanco','gris','beige'].includes(c.n));
+ if(col.length<2)return 2; /* los neutros combinan con todo */
+ let sc=0;for(let a=0;a<col.length;a++)for(let b=a+1;b<col.length;b++){const d=Math.abs(col[a].h-col[b].h),dd=Math.min(d,360-d);sc+=dd<35||Math.abs(dd-180)<25?1:-2}return sc}
+async function weatherTemp(){try{const p=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{timeout:4000}));
+ const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+p.coords.latitude+'&longitude='+p.coords.longitude+'&current=temperature_2m',{signal:AbortSignal.timeout(4000)});return(await r.json()).current.temperature_2m}catch(e){return null}}
+async function suggest(){$('outNote').textContent='Buscando combinación…';const T=await weatherTemp(),pick=c=>{const a=ITEMS.filter(i=>i.cat===c);return a.length?a[Math.random()*a.length|0]:null};
+ let best=null,bs=-9;for(let k=0;k<40;k++){const o=Math.random()<.3?[pick('Vestidos')]:[pick('Poleras'),pick('Pantalones')];
+  if(T===null?Math.random()<.5:T<16||(T<22&&Math.random()<.4))o.push(pick('Chaquetas'));o.push(pick('Calzado'));
+  const l=o.filter(Boolean);if(!l.length)continue;const sc=harmony(l.map(i=>i.color).filter(Boolean))+l.length;if(sc>bs){bs=sc;best=l}}
+ if(!best){$('outNote').textContent='Agrega más prendas para recibir sugerencias.';return}
+ wear(best.map(i=>i.id));$('outNote').textContent='Sugerencia'+(T!==null?' para '+Math.round(T)+' °C':'')+': '+best.map(i=>i.name).join(' + ')}
+$('outSug').onclick=suggest;
+
+/* ---------- Mi cuerpo ---------- */
+const meEl=$('me');
+function meSync(){$('meH').value=PROF.h;$('meW').value=PROF.w;$('meSk').value=PROF.skin;$('meHr').value=PROF.hair;$('meHT').textContent=PROF.h+' cm';$('meWT').textContent=PROF.w+' kg'}
+$('meBtn').onclick=()=>{meSync();meEl.classList.add('on')};
+meEl.addEventListener('click',e=>{if(e.target===meEl)meEl.classList.remove('on')});
+[['meH','h'],['meW','w'],['meSk','skin'],['meHr','hair']].forEach(([id,k])=>$(id).oninput=()=>{PROF[k]=(k==='skin'||k==='hair')?$(id).value:+$(id).value;$('meHT').textContent=PROF.h+' cm';$('meWT').textContent=PROF.w+' kg';applyProfile();try{localStorage.setItem('percha.prof',JSON.stringify(PROF))}catch(e){}});
+
+/* ---------- Compartir (Web Share API) ---------- */
+$('shareBtn').onclick=async()=>{renderer.render(scene,camera);const W=canvas.width,H=canvas.height,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),gr=g.createRadialGradient(W/2,H*.4,0,W/2,H*.4,H*.8);
+ gr.addColorStop(0,'#f6f1e8');gr.addColorStop(1,'#ddd4c6');g.fillStyle=gr;g.fillRect(0,0,W,H);g.drawImage(canvas,0,0);g.fillStyle='#1b4332';g.font='600 '+Math.round(W*.04)+'px sans-serif';g.fillText('Percha',W*.05,H*.95);
+ const blob=await new Promise(r=>c.toBlob(r,'image/png')),f=new File([blob],'outfit-percha.png',{type:'image/png'});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Mi outfit en Percha'})}catch(e){}}
+ else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=f.name;a.click()}};
+
+/* ---------- PWA ---------- */
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(console.warn));
 </script>
 </body>
 </html>

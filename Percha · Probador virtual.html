@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Percha · Probador virtual</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{--bg:#efe9e1;--sheet:#fff;--ink:#14161a;--muted:#6b7280;--blue:#2f6fdc;--blue-soft:#e8f0fd;--line:#e5e7eb;--chip:#f3f4f6;
+padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#2a2622;--sheet:#17191d;--ink:#f1f2f4;--muted:#9aa1ad;--line:#2b2f36;--chip:#242830;--blue-soft:#1d2a44}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--sheet);color:var(--ink);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;overscroll-behavior:none}
+.app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;position:relative;background:var(--sheet)}
+.stage{flex:1;position:relative;min-height:0;background:radial-gradient(ellipse at 50% 18%,#f7f2ea 0%,var(--bg) 70%);touch-action:none;cursor:grab}
+.stage:active{cursor:grabbing}
+canvas{width:100%;height:100%;display:block}
+.hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:12px;color:#5b6270;background:rgba(255,255,255,.7);padding:4px 10px;border-radius:99px;pointer-events:none;transition:opacity .4s}
+.busy{position:absolute;inset:0;display:grid;place-items:center;background:rgba(255,255,255,.55);opacity:0;pointer-events:none;transition:opacity .2s;font-weight:600;color:#1f2937}
+.busy.on{opacity:1}
+.sheet{background:var(--sheet);border-radius:22px 22px 0 0;margin-top:-18px;position:relative;padding:8px 16px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px rgba(0,0,0,.08)}
+.grip{width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 10px}
+.top{display:flex;align-items:center;justify-content:space-between}
+.avatar-dot{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c99a7a,#7a5238);border:2px solid var(--line)}
+.title{font-weight:600;font-size:17px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--chip);border-radius:99px;padding:6px 10px;font-size:13px;border:0;color:var(--ink);position:relative}
+.chip i{position:absolute;top:-4px;left:6px;background:#ef4444;color:#fff;font-style:normal;font-size:10px;width:15px;height:15px;border-radius:50%;display:grid;place-items:center}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:10px 0 8px}
+.nav h1{font-size:19px;font-weight:600;margin:0}
+.nav button{background:none;border:0;font-size:16px;color:var(--blue);padding:6px;cursor:pointer}
+.nav .back{color:var(--ink);font-size:22px}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px}
+.tabs button{border:1px solid var(--line);background:none;color:var(--muted);border-radius:99px;padding:5px 12px;font-size:13px;white-space:nowrap;cursor:pointer}
+.tabs button.on{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.rail{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 6px;scrollbar-width:none}
+.card{flex:0 0 76px;scroll-snap-align:start;border:1.5px solid var(--line);border-radius:12px;background:var(--sheet);padding:0;cursor:pointer;color:var(--ink);font:inherit;text-align:center;overflow:hidden;transition:box-shadow .15s,border-color .15s}
+.card .pic{height:88px;background:#f4f4f5;display:grid;place-items:center}
+.card .pic svg{width:56px;height:70px}
+.card span{display:block;font-size:12px;padding:6px 4px;min-height:34px;line-height:1.2}
+.card.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.card.worn::after{content:"Puesto";display:block;font-size:10px;color:var(--blue);margin-top:-4px;padding-bottom:4px}
+.cta{width:100%;margin-top:10px;border:0;background:var(--blue);color:#fff;font:600 17px/1 inherit;font-family:inherit;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 4px 12px rgba(47,111,220,.35);transition:transform .1s}
+.cta:active{transform:scale(.98)}
+.cta:disabled{opacity:.5}
+.status{text-align:center;font-size:14px;margin-top:10px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="c"></canvas>
+    <div class="busy" id="busy">Ajustando prendas…</div>
+    <div class="hint" id="hint">Desliza para girar · pellizca para acercar</div>
+  </div>
+  <div class="sheet">
+    <div class="grip"></div>
+    <div class="top">
+      <div class="avatar-dot" aria-hidden="true"></div>
+      <div class="title">Percha</div>
+      <button class="chip" type="button"><i>2</i>🔔 3 nuevos</button>
+    </div>
+    <div class="nav">
+      <button class="back" type="button" aria-label="Volver">‹</button>
+      <h1>Mi armario virtual</h1>
+      <button type="button" id="clear">Vaciar</button>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="rail" id="rail"></div>
+    <button class="cta" id="go" type="button">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a2 2 0 1 0-2-2"/><path d="M12 8v2l9 5.5a1.2 1.2 0 0 1-.6 2.2H3.6A1.2 1.2 0 0 1 3 15.5L12 10"/></svg>
+      Probar ahora
+    </button>
+    <div class="status" id="status">Outfit actual: 0 prendas</div>
+  </div>
+</div>
+
+<script>
+/* ---------- Catálogo (en producción vendrá de la API / S3) ---------- */
+const ITEMS=[
+ {id:'dress',name:'Vestido primavera',cat:'Vestidos',svg:'<path d="M22 6l-4 22 -9 36h38l-9-36-4-22" fill="#f6d85c"/><path d="M22 6c2 6 12 6 14 0" fill="none" stroke="#e1b93a" stroke-width="2"/>'},
+ {id:'jacket',name:'Chaqueta jeans',cat:'Chaquetas',svg:'<path d="M18 8h20l12 14-6 6-4-4v36H16V24l-4 4-6-6z" fill="#4c78ab"/><path d="M28 8v56" stroke="#35597f" stroke-width="2"/>'},
+ {id:'shoes',name:'Zapatillas',cat:'Calzado',svg:'<path d="M4 46c10-2 14-10 20-8 6 4 14 6 26 6 4 0 4 8 0 8H8c-4 0-6-4-4-6z" fill="#f2f2f2" stroke="#cfd2d6" stroke-width="2"/>'},
+ {id:'bag',name:'Bolso negro',cat:'Accesorios',svg:'<path d="M14 24c4-18 24-18 28 0" fill="none" stroke="#222" stroke-width="3"/><path d="M8 26h40l-4 30H12z" fill="#262626"/>'}
+];
+const CATS=['Todo',...new Set(ITEMS.map(i=>i.cat))];
+const sel=new Set(), worn=new Set();
+let cat='Todo';
+
+/* ---------- Armario ---------- */
+const rail=document.getElementById('rail'), tabs=document.getElementById('tabs'), status=document.getElementById('status');
+function drawTabs(){tabs.innerHTML='';CATS.forEach(c=>{const b=document.createElement('button');b.type='button';b.textContent=c;if(c===cat)b.className='on';b.onclick=()=>{cat=c;drawTabs();drawRail()};tabs.appendChild(b)})}
+function drawRail(){rail.innerHTML='';ITEMS.filter(i=>cat==='Todo'||i.cat===cat).forEach(i=>{
+ const b=document.createElement('button');b.type='button';b.className='card'+(sel.has(i.id)?' sel':'')+(worn.has(i.id)?' worn':'');
+ b.setAttribute('aria-pressed',sel.has(i.id));
+ b.innerHTML='<div class="pic"><svg viewBox="0 0 56 70">'+i.svg+'</svg></div><span>'+i.name+'</span>';
+ b.onclick=()=>{sel.has(i.id)?sel.delete(i.id):sel.add(i.id);drawRail();status.textContent='Selección: '+sel.size+(sel.size===1?' prenda':' prendas')};
+ rail.appendChild(b)})}
+drawTabs();drawRail();
+
+/* ---------- Escena 3D ---------- */
+const stage=document.getElementById('stage'), canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(30,1,.1,50);
+let zoom=4.6; camera.position.set(0,1,zoom); camera.lookAt(0,.92,0);
+scene.add(new THREE.HemisphereLight(0xfff6ea,0xb9ab9a,.85));
+const key=new THREE.DirectionalLight(0xffffff,.8); key.position.set(2,4,3); scene.add(key);
+const rim=new THREE.DirectionalLight(0xffe6cc,.3); rim.position.set(-3,2,-3); scene.add(rim);
+
+const M=(c,r=.7)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+const skin=M(0xc99a7a,.6), root=new THREE.Group(); scene.add(root);
+function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);return o}
+const cyl=(rt,rb,h,s=24)=>new THREE.CylinderGeometry(rt,rb,h,s);
+
+/* Avatar procedural (placeholder del .glb generado por SMPL/HMR) */
+const body=new THREE.Group(); root.add(body);
+body.add(mesh(cyl(.17,.13,.5),skin,0,1.2));                 // torso
+body.add(mesh(new THREE.SphereGeometry(.15,24,16),skin,0,.93)); // cadera
+body.add(mesh(cyl(.045,.05,.1),skin,0,1.5));                // cuello
+body.add(mesh(new THREE.SphereGeometry(.105,28,20),skin,0,1.63)); // cabeza
+const hair=mesh(new THREE.SphereGeometry(.118,28,20),M(0x7a5238,.8),0,1.645,-.015);hair.scale.set(1,1.05,1.02);body.add(hair);
+body.add(mesh(cyl(.13,.1,.28),M(0x7a5238,.8),0,1.52,-.07));
+[-1,1].forEach(s=>{
+ const leg=mesh(cyl(.075,.05,.85),skin,s*.085,.45);body.add(leg);
+ const arm=mesh(cyl(.04,.032,.6),skin,s*.255,1.2);arm.rotation.z=s*.08;body.add(arm);
+ body.add(mesh(new THREE.SphereGeometry(.05,12,10),skin,s*.255,.9));
+ body.add(mesh(new THREE.BoxGeometry(.075,.04,.2),skin,s*.085,.03,.04)); // pie
+});
+
+/* Ropa base: polera gris + short negro */
+const base=new THREE.Group(); body.add(base);
+base.add(mesh(cyl(.185,.145,.48),M(0x8d9096),0,1.2));
+[-1,1].forEach(s=>base.add(mesh(cyl(.082,.062,.3),M(0x1c1c1c),s*.085,.82)));
+
+/* Prendas */
+const G={};
+// Vestido: lathe
+{const pts=[[.17,1.42],[.15,1.2],[.14,1.05],[.19,.85],[.27,.62],[.3,.55]].map(p=>new THREE.Vector2(p[0],p[1]));
+ const g=new THREE.Group();g.add(mesh(new THREE.LatheGeometry(pts,40),new THREE.MeshStandardMaterial({color:0xf6d85c,roughness:.8,side:THREE.DoubleSide})));
+ [-1,1].forEach(s=>g.add(mesh(cyl(.012,.012,.12),M(0xe1b93a),s*.09,1.46)));G.dress=g}
+// Chaqueta
+{const g=new THREE.Group(),m=M(0x4c78ab,.9);
+ g.add(mesh(cyl(.215,.18,.5),m,0,1.2));
+ [-1,1].forEach(s=>{const a=mesh(cyl(.062,.05,.58),m,s*.265,1.19);a.rotation.z=s*.08;g.add(a)});
+ g.add(mesh(new THREE.BoxGeometry(.012,.5,.4),M(0x35597f),0,1.2,.1));G.jacket=g}
+// Zapatillas
+{const g=new THREE.Group(),m=M(0xf4f4f4,.5);
+ [-1,1].forEach(s=>g.add(mesh(new THREE.BoxGeometry(.105,.07,.27),m,s*.085,.04,.06)));G.shoes=g}
+// Bolso
+{const g=new THREE.Group(),m=M(0x222222,.6);
+ g.add(mesh(new THREE.BoxGeometry(.07,.17,.24),m,-.32,.88,.02));
+ const strap=mesh(cyl(.007,.007,.78),m,-.08,1.24);strap.rotation.z=-.38;g.add(strap);G.bag=g}
+Object.values(G).forEach(g=>{g.visible=false;body.add(g)});
+
+function applyOutfit(){
+ worn.clear();sel.forEach(id=>worn.add(id));
+ Object.keys(G).forEach(k=>G[k].visible=worn.has(k));
+ base.visible=!worn.has('dress');                 // capas: el vestido reemplaza la ropa base
+ base.children.forEach((c,i)=>{if(i===0)c.visible=!worn.has('jacket')||true});
+ status.textContent='Outfit actual: '+worn.size+(worn.size===1?' prenda':' prendas');
+ drawRail();
+}
+
+/* ---------- Controles táctiles: 1 dedo gira, 2 dedos pellizcan ---------- */
+let rotY=0.35,vel=0,dragging=false,lastX=0;const ptrs=new Map();let pinch0=0,zoom0=0;
+const hint=document.getElementById('hint');
+stage.addEventListener('pointerdown',e=>{stage.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,e);if(ptrs.size===1){dragging=true;lastX=e.clientX;vel=0}
+ if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch0=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);zoom0=zoom}
+ hint.style.opacity=0;setPR(1)});
+stage.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,e);
+ if(ptrs.size===2){const[a,b]=[...ptrs.values()];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);zoom=Math.min(7,Math.max(2.6,zoom0*pinch0/d))}
+ else if(dragging){const dx=e.clientX-lastX;lastX=e.clientX;vel=dx*.012;rotY+=vel}});
+const up=e=>{ptrs.delete(e.pointerId);if(!ptrs.size){dragging=false;setPR(Math.min(devicePixelRatio,2))}};
+stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+stage.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(7,Math.max(2.6,zoom+e.deltaY*.003))},{passive:false});
+
+/* Resolución dinámica: baja mientras giras, sube al soltar */
+let pr=1;function setPR(v){pr=v;renderer.setPixelRatio(v);resize()}
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);setPR(Math.min(devicePixelRatio,2));
+
+(function loop(){requestAnimationFrame(loop);
+ if(!dragging){rotY+=vel;vel*=.94}
+ root.rotation.y=rotY;camera.position.z=zoom;camera.position.y=.92+(zoom-4.6)*.03;camera.lookAt(0,.92,0);
+ renderer.render(scene,camera)})();
+
+/* ---------- Probar ahora ---------- */
+const busy=document.getElementById('busy'),go=document.getElementById('go');
+go.onclick=()=>{go.disabled=true;busy.classList.add('on');
+ if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}
+ /* En producción: POST /tryon {avatar_id, prendas[]} → textura compuesta → recargar .glb */
+ setTimeout(()=>{applyOutfit();busy.classList.remove('on');go.disabled=false},650)};
+document.getElementById('clear').onclick=()=>{sel.clear();applyOutfit();status.textContent='Outfit actual: 0 prendas'};
+</script>
+</body>
+</html>

@@ -35,7 +35,7 @@ canvas{width:100%;height:100%;display:block}
 .views button{padding:7px 14px;border-radius:9px;font-size:13px;font-weight:500;color:var(--muted)}
 .views button.on{background:var(--ink);color:var(--s1)}
 .panel{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border-radius:28px;padding:6px 14px 14px;display:flex;flex-direction:column;max-height:62%}
-.grab{height:22px;display:grid;place-items:center;width:100%}
+.grab{height:40px;display:grid;place-items:center;width:100%;touch-action:none;cursor:grab}
 .grab i{width:36px;height:4px;border-radius:2px;background:var(--hair);display:block;background:var(--muted);opacity:.4}
 .head{display:flex;align-items:baseline;justify-content:space-between;padding:4px 2px 2px}
 .head h1{margin:0;font-size:20px;font-weight:650;letter-spacing:-.015em}
@@ -194,7 +194,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
   <label class="sl" for="meW">Peso: <span id="meWT"></span></label><input type="range" id="meW" min="40" max="130">
   <label class="sl" for="meSk">Tono de piel</label><input type="color" id="meSk">
   <label class="sl" for="meHr">Color de cabello</label><input type="color" id="meHr">
-  <p>El avatar se ajusta en tiempo real y queda guardado en este dispositivo.</p></div></div>
+  <button class="cta ghost" id="mePhoto" type="button" style="margin-top:14px">Crear mi avatar desde una foto</button><input type="file" accept="image/*" id="fMe" hidden>
+  <p id="meNote" role="status">Foto de cuerpo entero, de pie y de frente, con fondo liso y los brazos un poco separados. Todo se procesa en tu dispositivo.</p></div></div>
 <input type="file" accept="image/*" capture="environment" id="fCam" hidden>
 <input type="file" accept="image/*" id="fGal" hidden>
 
@@ -225,7 +226,9 @@ function drawChips(){const c=$('chips');c.innerHTML='';if(!sel.size){const p=doc
 function refresh(){drawList();drawChips();$('go').textContent=sel.size?'Probar ahora ('+sel.size+')':'Probar ahora'}
 $('clear').onclick=()=>{sel.clear();refresh();applyOutfit()};
 drawTabs();refresh();
-const panel=$('panel');$('grab').onclick=()=>panel.classList.toggle('min');
+const panel=$('panel');{const g=$('grab');let y0=null;g.addEventListener('pointerdown',e=>{y0=e.clientY;g.setPointerCapture(e.pointerId)});
+ g.addEventListener('pointerup',e=>{if(y0===null)return;const dy=e.clientY-y0;y0=null;if(Math.abs(dy)<10)panel.classList.toggle('min');else panel.classList.toggle('min',dy>0)});
+ g.addEventListener('pointercancel',()=>{y0=null})}
 
 /* ---------- Escena 3D ---------- */
 const stage=$('stage'),canvas=$('c');
@@ -239,15 +242,33 @@ const rim=new THREE.DirectionalLight(0xffe6cc,.3);rim.position.set(-3,2,-3);scen
 const M=(c,r=.7)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
 const mesh=(g,m,x=0,y=0,z=0)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);return o};
 const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,24);
-const skin=M(0xc99a7a,.6),root=new THREE.Group(),body=new THREE.Group();scene.add(root);root.add(body);
+const skin=M(0xdcb08e,.55),root=new THREE.Group(),body=new THREE.Group();scene.add(root);root.add(body);
 skin.side=THREE.DoubleSide;
-const TP=[[.001,.84],[.13,.85],[.17,.92],[.175,1.0],[.14,1.1],[.125,1.18],[.145,1.27],[.17,1.36],[.15,1.45],[.07,1.5],[.001,1.5]];
-function torso(k,m,from){const o=mesh(new THREE.LatheGeometry(TP.slice(from||0).map(p=>new THREE.Vector2(p[0]*k,p[1])),32),m||skin);o.scale.z=.68;return o}
-body.add(torso(1),mesh(cyl(.045,.05,.1),skin,0,1.5),mesh(new THREE.SphereGeometry(.105,28,20),skin,0,1.63));
-const hm=M(0x7a5238,.8),hair=mesh(new THREE.SphereGeometry(.118,28,20),hm,0,1.645,-.015);hair.scale.set(1,1.05,1.02);body.add(hair,mesh(cyl(.13,.1,.28),hm,0,1.52,-.07));
-[-1,1].forEach(s=>{body.add(mesh(cyl(.075,.05,.85),skin,s*.085,.45));const a=mesh(cyl(.04,.032,.6),skin,s*.255,1.2);a.rotation.z=s*.08;body.add(a,mesh(new THREE.SphereGeometry(.05,12,10),skin,s*.255,.9),mesh(new THREE.BoxGeometry(.075,.04,.2),skin,s*.085,.03,.04))});
-const baseTop=new THREE.Group(),baseShorts=new THREE.Group();body.add(baseTop,baseShorts);baseTop.add(torso(1.05,Object.assign(M(0x8d9096),{side:THREE.DoubleSide}),3));
-[-1,1].forEach(s=>baseShorts.add(mesh(cyl(.082,.062,.3),M(0x1c1c1c),s*.085,.82)));
+/* Maniquí paramétrico: torso, piernas y brazos con curvas (lathe); SHP = hombros/cintura/cadera */
+const SHP={sh:1,wa:1,hi:1};
+const tgeo=(k,from)=>{const{sh,wa,hi}=SHP;return new THREE.LatheGeometry([[.001,.84],[.125*hi,.85],[.165*hi,.92],[.17*hi,1.0],[.135*wa,1.1],[.12*wa,1.18],[.14*sh,1.27],[.165*sh,1.36],[.15*sh,1.44],[.07,1.49],[.001,1.5]].slice(from||0).map(p=>new THREE.Vector2(p[0]*k,p[1])),40)};
+function torso(k,m,from){const o=mesh(tgeo(k,from),m||skin);o.scale.z=.68;return o}
+const lathe=(pts,m)=>mesh(new THREE.LatheGeometry(pts.map(p=>new THREE.Vector2(p[0],p[1])),24),m);
+const LEG=[[.001,.06],[.03,.06],[.04,.14],[.052,.26],[.046,.43],[.058,.5],[.072,.65],[.082,.8],[.084,.9],[.001,.9]];
+const ARM=[[.001,-.03],[.026,-.02],[.03,.08],[.036,.28],[.042,.42],[.048,.54],[.04,.6],[.001,.63]];
+const torsoM=torso(1),topM=torso(1.05,Object.assign(M(0xe8e8ee),{side:THREE.DoubleSide}),3);
+const head=mesh(new THREE.SphereGeometry(.095,32,24),skin,0,1.63);head.scale.set(.92,1.12,1);
+body.add(torsoM,mesh(cyl(.038,.045,.1),skin,0,1.52),head);
+[-1,1].forEach(s=>body.add(mesh(new THREE.SphereGeometry(.009,10,8),M(0x2a2018,.3),s*.035,1.645,.089)));
+{const mo=mesh(new THREE.SphereGeometry(.014,10,8),M(0xb5605f,.5),0,1.598,.089);mo.scale.set(1.6,.5,.5);body.add(mo)}
+const hm=M(0x6b4630,.75);hm.side=THREE.DoubleSide;
+{const hg=(a,b,c,d)=>new THREE.SphereGeometry(.104,32,20,a,b,c,d),hair=new THREE.Group();hair.position.set(0,1.634,-.006);hair.scale.set(.93,1.12,1.02);
+ hair.add(mesh(hg(0,Math.PI*2,0,Math.PI*.36),hm),mesh(hg(Math.PI*.7,Math.PI*1.6,Math.PI*.36,Math.PI*.45),hm));body.add(hair)}
+const legM=[],armG=[];
+[-1,1].forEach(s=>{const l=lathe(LEG,skin);body.add(l);legM.push(l);
+ const g=new THREE.Group();g.rotation.z=s*.1;g.userData.s=s;const a=lathe(ARM,skin);a.position.y=-.6;g.add(a,mesh(new THREE.SphereGeometry(.034,14,10),skin,0,-.66));body.add(g);armG.push(g);
+ body.add(mesh(new THREE.BoxGeometry(.08,.045,.21),skin,s*.09,.022,.045))});
+const baseTop=new THREE.Group(),baseShorts=new THREE.Group();body.add(baseTop,baseShorts);baseTop.add(topM);
+[-1,1].forEach(s=>baseShorts.add(mesh(cyl(.09,.083,.26),M(0x2b2b30),s*.09,.8)));
+function fitBody(){const{sh,hi}=SHP;torsoM.geometry.dispose();torsoM.geometry=tgeo(1);topM.geometry.dispose();topM.geometry=tgeo(1.05,3);
+ legM.forEach((l,k)=>l.position.x=(k?1:-1)*.09*hi);baseShorts.children.forEach((c,k)=>c.position.x=(k?1:-1)*.09*hi);
+ armG.forEach(g=>g.position.set(g.userData.s*(.165*sh+.035),1.41,0))}
+fitBody();
 /* Ajuste por categoría (cuerpo de 1.75 m, en metros): w/h caja máxima, y centro, d profundidad, bw semiancho que envuelve; side = lámina lateral */
 const FIT={Vestidos:{w:.64,h:.98,y:.98,d:.17,bw:.2},Poleras:{w:.7,h:.55,y:1.2,d:.19,bw:.2},Chaquetas:{w:.86,h:.64,y:1.18,d:.24,bw:.24},Pantalones:{w:.42,h:.8,y:.45,d:.15,bw:.2},Calzado:{w:.3,h:.18,y:.09,side:1},Accesorios:{w:.26,h:.3,y:.86,x:-.34,side:1}};
 const avatar={glb:null};
@@ -289,8 +310,8 @@ async function applyOutfit(){const list=ITEMS.filter(i=>sel.has(i.id));
 
 /* ---------- Perfil corporal, piel, cabello y respiración (idle) ---------- */
 const clock=new THREE.Clock();let mixer=null,breath=0,baseS=[1,1,1];
-const PROF=Object.assign({h:170,w:65,skin:'#c99a7a',hair:'#7a5238'},(()=>{try{return JSON.parse(localStorage.getItem('percha.prof')||'{}')}catch(e){return{}}})());
-function applyProfile(){const bmi=PROF.w/Math.pow(PROF.h/100,2),k=Math.min(1.35,Math.max(.8,1+(bmi-22)*.03));
+const PROF=Object.assign({h:170,w:65,skin:'#dcb08e',hair:'#6b4630',sh:1,wa:1,hi:1},(()=>{try{return JSON.parse(localStorage.getItem('percha.prof')||'{}')}catch(e){return{}}})());
+function applyProfile(){Object.assign(SHP,{sh:PROF.sh||1,wa:PROF.wa||1,hi:PROF.hi||1});fitBody();const bmi=PROF.w/Math.pow(PROF.h/100,2),k=Math.min(1.35,Math.max(.8,1+(bmi-22)*.03));
  baseS=[k,PROF.h/175,k];skin.color.set(PROF.skin);hm.color.set(PROF.hair);
  if(avatar.glb)avatar.glb.traverse(o=>{if(!o.isMesh)return;[].concat(o.material).forEach(m=>{if(/skin|body|piel/i.test((m.name||'')+o.name))m.color.set(PROF.skin)});
   const d=o.morphTargetDictionary;if(d)['weight','peso','Weight'].forEach(n=>{if(n in d)o.morphTargetInfluences[d[n]]=Math.min(1,Math.max(0,(bmi-18)/17))})})}
@@ -478,6 +499,31 @@ $('shareBtn').onclick=async()=>{renderer.render(scene,camera);const W=canvas.wid
  const blob=await new Promise(r=>c.toBlob(r,'image/png')),f=new File([blob],'outfit-percha.png',{type:'image/png'});
  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Mi outfit en Percha'})}catch(e){}}
  else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=f.name;a.click()}};
+
+/* ---------- Digitalizar desde foto: tono de piel, cabello y proporciones ---------- */
+const isSkin=(r,g,b)=>r>95&&g>40&&b>20&&Math.max(r,g,b)-Math.min(r,g,b)>15&&Math.abs(r-g)>12&&r>g&&r>b;
+const med=a=>{a.sort((x,y)=>x-y);return a[a.length>>1]};
+const hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+async function digitize(file){const note=$('meNote');note.textContent='Analizando tu foto…';
+ const img=await createImageBitmap(file).catch(()=>null);if(!img){note.textContent='No se pudo leer la foto.';return}
+ const sc=Math.min(1,700/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+ let cut,ia=false;
+ try{const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85)),fd=new FormData();fd.append('file',blob,'yo.jpg');
+  const res=await fetch(API_URL+'/api/remove-background',{method:'POST',body:fd,signal:AbortSignal.timeout(20000)});if(!res.ok)throw 0;
+  const bm=await createImageBitmap(await res.blob());cut=document.createElement('canvas');cut.width=bm.width;cut.height=bm.height;cut.getContext('2d').drawImage(bm,0,0);ia=true}
+ catch(e){cut=softCut(c)}
+ const o=cropAlpha(cut);if(!o||o.height<o.width*1.2){note.textContent='No detecté una persona de cuerpo entero. Usa una foto de pie, completa y con fondo liso.';return}
+ const W=o.width,H=o.height,d=o.getContext('2d').getImageData(0,0,W,H).data,A=(x,y)=>d[(y*W+x)*4+3]>128;
+ let sx=0,n=0;for(let y=Math.round(H*.25);y<H*.6;y++)for(let x=0;x<W;x++)if(A(x,y)){sx+=x;n++}const cx=Math.round(sx/(n||1));
+ const wid=f=>{const y=Math.min(H-1,Math.round(H*f));if(!A(cx,y))return 0;let l=cx,r=cx;while(l>0&&A(l-1,y))l--;while(r<W-1&&A(r+1,y))r++;return(r-l+1)/H};
+ const cl=(v,a,b)=>Math.min(b,Math.max(a,v)),ws=wid(.2),ww=wid(.42),wh=wid(.52),p={};
+ if(ws)p.sh=cl(ws/.24,.8,1.3);if(ww)p.wa=cl(ww/.15,.8,1.4);if(wh)p.hi=cl(wh/.19,.8,1.4);
+ const px=(y0,y1,f)=>{const R=[],G=[],B=[];for(let y=Math.round(y0*H);y<y1*H;y++)for(let x=Math.max(0,Math.round(cx-.05*H));x<Math.min(W,cx+.05*H);x++){const i=(y*W+x)*4;if(d[i+3]>200&&f(d[i],d[i+1],d[i+2])){R.push(d[i]);G.push(d[i+1]);B.push(d[i+2])}}return R.length>40?[med(R),med(G),med(B)]:null};
+ const sk=px(.03,.12,isSkin),hr=px(0,.05,(r,g,b)=>!isSkin(r,g,b));if(sk)p.skin=hex(...sk);if(hr)p.hair=hex(...hr);
+ Object.assign(PROF,p);try{localStorage.setItem('percha.prof',JSON.stringify(PROF))}catch(e){}
+ meSync();applyProfile();ITEMS.forEach(i=>{if(i.mesh){root.remove(i.mesh);i.mesh=null}});applyOutfit();
+ note.textContent='Listo: ajusté tono de piel, cabello y proporciones'+(ia?'.':' con un recorte local (con el servidor de IA queda más preciso).')+' La foto no se guarda.'}
+$('mePhoto').onclick=()=>$('fMe').click();$('fMe').onchange=e=>{if(e.target.files[0])digitize(e.target.files[0]);e.target.value=''};
 
 /* ---------- PWA ---------- */
 if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(console.warn));

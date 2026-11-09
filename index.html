@@ -8,6 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/DecalGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
 :root{--ink:#17191c;--muted:#68707c;--em:#1b4332;--on-em:#fff;--panel:rgba(252,250,246,.72);--edge:rgba(255,255,255,.75);--hair:rgba(23,25,28,.09);--tile:rgba(23,25,28,.045);--s1:#f6f1e8;--s2:#ddd4c6;--sh:0 12px 40px rgba(40,30,15,.14);box-sizing:border-box}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#f1f2f4;--muted:#9ea6b2;--em:#3f8f6b;--panel:rgba(30,32,36,.66);--edge:rgba(255,255,255,.12);--hair:rgba(255,255,255,.1);--tile:rgba(255,255,255,.07);--s1:#3b352f;--s2:#1c1a17;--sh:0 12px 40px rgba(0,0,0,.45)}}
@@ -69,6 +73,7 @@ canvas{width:100%;height:100%;display:block}
 .tags{display:flex;flex-wrap:wrap;gap:6px}.tags button{padding:9px 14px;border-radius:10px;background:var(--tile);font-size:14px;font-weight:500}.tags button.on{background:var(--em);color:var(--on-em)}
 .card2 input{width:100%;margin:12px 0;border:0;border-radius:12px;background:var(--tile);color:var(--ink);padding:14px;font:inherit;font-size:15px}
 .card2 .cta{width:100%}.card2 p{font-size:12.5px;color:var(--muted);margin:10px 2px 0}
+.cta.ghost{background:var(--tile);color:var(--ink)}
 :focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:8px}
 /* Tablet: panel lateral fijo, avatar grande */
 @media (min-width:760px){
@@ -91,7 +96,7 @@ canvas{width:100%;height:100%;display:block}
       <div class="brand"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a2 2 0 1 0-2-2"/><path d="M12 8v2l9 5.5a1.2 1.2 0 0 1-.6 2.2H3.6A1.2 1.2 0 0 1 3 15.5L12 10"/></svg></span>Percha</div>
       <div class="tools">
         <button class="ibtn glass" type="button" aria-label="Outfits guardados"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4-6 4z"/></svg></button>
-        <button class="ibtn glass" type="button" aria-label="Perfil y medidas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/></svg></button>
+        <button class="ibtn glass" id="acctBtn" type="button" aria-label="Cuenta y medidas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/></svg></button>
       </div>
     </div>
     <div class="views glass" id="views" role="group" aria-label="Vista del avatar"><button type="button" data-r="0.35" class="on">Frente</button><button type="button" data-r="1.92">Perfil</button><button type="button" data-r="3.49">Espalda</button></div>
@@ -127,10 +132,18 @@ canvas{width:100%;height:100%;display:block}
     <p id="addNote" role="status"></p>
   </div></div>
 </div>
+<div class="add" id="acct"><div class="card2 glass">
+  <h2>Tu cuenta</h2><p id="acctS"></p>
+  <input type="email" id="acctMail" placeholder="correo@ejemplo.com" autocomplete="email" aria-label="Correo electrónico">
+  <button class="cta" id="acctIn" type="button">Enviar enlace de acceso</button>
+  <button class="cta ghost" id="acctOut" type="button">Cerrar sesión</button>
+</div></div>
 <input type="file" accept="image/*" capture="environment" id="fCam" hidden>
 <input type="file" accept="image/*" id="fGal" hidden>
 
 <script>
+/* Configuración: completa estos valores al desplegar. Sin Supabase la app guarda en IndexedDB (solo este dispositivo). */
+const CFG={SUPABASE_URL:'',SUPABASE_ANON_KEY:'',API_URL:'http://localhost:8000',AVATAR_URL:'models/avatar.glb',AVATAR_HEIGHT:1.75};
 const $=id=>document.getElementById(id);
 const KEY={Vestidos:'dress',Poleras:'top',Chaquetas:'jacket',Pantalones:'pants',Calzado:'shoes',Accesorios:'bag'};
 const ITEMS=[
@@ -175,33 +188,43 @@ const hm=M(0x7a5238,.8),hair=mesh(new THREE.SphereGeometry(.118,28,20),hm,0,1.64
 [-1,1].forEach(s=>{body.add(mesh(cyl(.075,.05,.85),skin,s*.085,.45));const a=mesh(cyl(.04,.032,.6),skin,s*.255,1.2);a.rotation.z=s*.08;body.add(a,mesh(new THREE.SphereGeometry(.05,12,10),skin,s*.255,.9),mesh(new THREE.BoxGeometry(.075,.04,.2),skin,s*.085,.03,.04))});
 const baseTop=new THREE.Group(),baseShorts=new THREE.Group();body.add(baseTop,baseShorts);baseTop.add(mesh(cyl(.185,.145,.48),M(0x8d9096),0,1.2));
 [-1,1].forEach(s=>baseShorts.add(mesh(cyl(.082,.062,.3),M(0x1c1c1c),s*.085,.82)));
-const G={};
-{const m=new THREE.MeshStandardMaterial({color:0xf6d85c,roughness:.8,side:THREE.DoubleSide}),pts=[[.17,1.42],[.15,1.2],[.14,1.05],[.19,.85],[.27,.62],[.3,.55]].map(p=>new THREE.Vector2(...p)),g=new THREE.Group();g.add(mesh(new THREE.LatheGeometry(pts,40),m));[-1,1].forEach(s=>g.add(mesh(cyl(.012,.012,.12),M(0xe1b93a),s*.09,1.46)));g.userData={m,def:0xf6d85c};G.dress=g}
-{const m=M(0x4c78ab,.9),g=new THREE.Group();g.add(mesh(cyl(.215,.18,.5),m,0,1.2));[-1,1].forEach(s=>{const a=mesh(cyl(.062,.05,.58),m,s*.265,1.19);a.rotation.z=s*.08;g.add(a)});g.add(mesh(new THREE.BoxGeometry(.012,.5,.4),M(0x35597f),0,1.2,.1));g.userData={m,def:0x4c78ab};G.jacket=g}
-{const m=M(0xf4f4f4,.5),g=new THREE.Group();[-1,1].forEach(s=>g.add(mesh(new THREE.BoxGeometry(.105,.07,.27),m,s*.085,.04,.06)));g.userData={m,def:0xf4f4f4};G.shoes=g}
-{const m=M(0x222222,.6),g=new THREE.Group();g.add(mesh(new THREE.BoxGeometry(.07,.17,.24),m,-.32,.88,.02));const st=mesh(cyl(.007,.007,.78),m,-.08,1.24);st.rotation.z=-.38;g.add(st);g.userData={m,def:0x222222};G.bag=g}
-Object.values(G).forEach(g=>{g.visible=false;body.add(g)});
-/* Ajuste por categoría (metros): w/h = caja máxima, y = centro, bw = semiancho del torso/piernas que la prenda envuelve, d = profundidad frontal */
-const FIT={Vestidos:{w:.64,h:.98,y:.98,bw:.2,d:.2},Poleras:{w:.7,h:.55,y:1.2,bw:.2,d:.19},Chaquetas:{w:.86,h:.64,y:1.18,bw:.22,d:.21},Pantalones:{w:.42,h:.8,y:.45,bw:.2,d:.15},Calzado:{w:.3,h:.18,y:.09,side:1},Accesorios:{w:.26,h:.3,y:.86,x:-.34,side:1}};
-/* PNG recortado → THREE.CanvasTexture → "prenda invisible": dos láminas (frente/espalda) que se curvan alrededor del cuerpo; el canal alfa del PNG recorta la silueta */
+/* Ajuste por categoría (cuerpo de 1.75 m, en metros): w/h caja máxima, y centro, d profundidad, bw semiancho que envuelve; side = lámina lateral */
+const FIT={Vestidos:{w:.64,h:.98,y:.98,d:.2,bw:.2},Poleras:{w:.7,h:.55,y:1.2,d:.19,bw:.2},Chaquetas:{w:.86,h:.64,y:1.18,d:.21,bw:.22},Pantalones:{w:.42,h:.8,y:.45,d:.15,bw:.2},Calzado:{w:.3,h:.18,y:.09,side:1},Accesorios:{w:.26,h:.3,y:.86,x:-.34,side:1}};
+const avatar={glb:null};
+const targets=()=>{const a=[];(avatar.glb||body).traverse(o=>{if(o.isMesh&&(avatar.glb||o.material===skin))a.push(o)});return a};
+const fabric=(tex,col,side)=>new THREE.MeshStandardMaterial({map:tex,color:col,transparent:true,alphaTest:.5,roughness:.9,side:side||THREE.FrontSide,polygonOffset:true,polygonOffsetFactor:-4});
+function sheets(g,W,H,f,tex){[1,-1].forEach(sg=>{const geo=new THREE.PlaneGeometry(W,H,28,16),p=geo.attributes.position;
+ for(let k=0;k<p.count;k++){const t=Math.min(1,Math.abs(p.getX(k))/f.bw);p.setZ(k,sg*(.05+(f.d-.05)*Math.sqrt(1-t*t)))}
+ geo.computeVertexNormals();g.add(mesh(geo,fabric(tex,sg>0?0xffffff:0xbdbdbd,THREE.DoubleSide),0,f.y,0))})}
+/* PNG recortado → CanvasTexture → DecalGeometry proyectada sobre la malla del avatar (frente y espalda) */
 function buildGarment(i){const f=FIT[i.cat],c=i.canvas,a=c.width/c.height,H=Math.min(f.h,f.w/a),W=a*H;
  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;tex.generateMipmaps=false;
- const mat=col=>new THREE.MeshStandardMaterial({map:tex,color:col,alphaTest:.5,side:THREE.DoubleSide,roughness:.9});
- const g=new THREE.Group();body.add(g);
- const flat=(x,z,ry,flip)=>{const m=mesh(new THREE.PlaneGeometry(W,H),mat(0xffffff),x,f.y,z);m.rotation.y=ry;if(flip)m.scale.x=-1;g.add(m)};
- if(f.side){if(i.cat==='Calzado')[-1,1].forEach(s=>flat(s*.13,.06,s*Math.PI/2,s<0));else flat(f.x,.02,-Math.PI/2,false)}
- else[1,-1].forEach(sg=>{const geo=new THREE.PlaneGeometry(W,H,28,16),p=geo.attributes.position;
-  for(let k=0;k<p.count;k++){const t=Math.min(1,Math.abs(p.getX(k))/f.bw);p.setZ(k,sg*(.05+(f.d-.05)*Math.sqrt(1-t*t)))} // UV planares, z curvada
-  geo.computeVertexNormals();g.add(mesh(geo,mat(sg>0?0xffffff:0xbdbdbd),0,f.y,0))});
- return g}
-function applyOutfit(){
- Object.values(G).forEach(g=>g.visible=false);ITEMS.forEach(i=>i.mesh&&(i.mesh.visible=false));
- const on={};let n=0;
- ITEMS.filter(i=>sel.has(i.id)).forEach(i=>{on[i.cat]=1;n++;
-  if(i.canvas){i.mesh=i.mesh||buildGarment(i);i.mesh.visible=true}
-  else{const g=G[KEY[i.cat]];if(g){g.visible=true;g.userData.m.color.set(g.userData.def)}}});
- baseTop.visible=!(on.Vestidos||on.Poleras||on.Chaquetas);baseShorts.visible=!(on.Vestidos||on.Pantalones);
- applied=n;$('status').textContent='En el avatar: '+n}
+ const g=new THREE.Group();root.add(g);
+ if(f.side){const flat=(x,z,ry,flip)=>{const m=mesh(new THREE.PlaneGeometry(W,H),fabric(tex,0xffffff,THREE.DoubleSide),x,f.y,z);m.rotation.y=ry;if(flip)m.scale.x=-1;g.add(m)};
+  if(i.cat==='Calzado')[-1,1].forEach(s=>flat(s*.13,.06,s*Math.PI/2,s<0));else flat(f.x,.02,-Math.PI/2,false);return g}
+ const r0=root.rotation.y;root.rotation.y=0;root.updateMatrixWorld(true); // las calcomanías se generan en coordenadas de mundo
+ try{[1,-1].forEach(sg=>{const ori=new THREE.Euler(0,sg>0?0:Math.PI,0),pos=new THREE.Vector3(0,f.y,sg*.2),size=new THREE.Vector3(W,H,.5);
+   targets().forEach(t=>{const geo=new THREE.DecalGeometry(t,pos,ori,size);if(geo.attributes.position.count)g.add(new THREE.Mesh(geo,fabric(tex,sg>0?0xffffff:0xbdbdbd)))})})}
+ catch(e){console.warn('Decal falló; uso láminas',e);g.clear()}
+ if(!g.children.length)sheets(g,W,H,f,tex);
+ root.rotation.y=r0;root.updateMatrixWorld(true);return g}
+const loadImg=u=>new Promise((ok,no)=>{const m=new Image();m.crossOrigin='anonymous';m.onload=()=>ok(m);m.onerror=no;m.src=u});
+async function ensureCanvas(i){if(i.canvas)return;
+ const m=await loadImg(i.svg?'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 70" width="280" height="350">'+i.svg+'</svg>'):i.src);
+ const c=document.createElement('canvas');c.width=m.naturalWidth||280;c.height=m.naturalHeight||350;c.getContext('2d').drawImage(m,0,0);i.canvas=cropAlpha(c)}
+async function applyOutfit(){const list=ITEMS.filter(i=>sel.has(i.id));
+ await Promise.all(list.map(ensureCanvas));
+ ITEMS.forEach(i=>i.mesh&&(i.mesh.visible=false));const on={};
+ list.forEach(i=>{if(!i.canvas)return;on[i.cat]=1;i.mesh=i.mesh||buildGarment(i);i.mesh.visible=true});
+ const bare=!!avatar.glb;baseTop.visible=!bare&&!(on.Vestidos||on.Poleras||on.Chaquetas);baseShorts.visible=!bare&&!(on.Vestidos||on.Pantalones);
+ applied=list.length;$('status').textContent='En el avatar: '+list.length}
+/* Avatar real: .glb (Draco opcional). Si no existe el archivo, se mantiene el avatar procedural */
+{const dr=new THREE.DRACOLoader();dr.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/gltf/');
+ const ld=new THREE.GLTFLoader();ld.setDRACOLoader(dr);
+ ld.load(CFG.AVATAR_URL,gl=>{const m=gl.scene;m.scale.setScalar(CFG.AVATAR_HEIGHT/new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()).y);
+  const b=new THREE.Box3().setFromObject(m),c=b.getCenter(new THREE.Vector3());m.position.set(-c.x,-b.min.y,-c.z);
+  root.add(m);m.updateMatrixWorld(true);avatar.glb=m;body.visible=false;
+  ITEMS.forEach(i=>{if(i.mesh){root.remove(i.mesh);i.mesh=null}});applyOutfit()},undefined,()=>console.info('Sin .glb en '+CFG.AVATAR_URL+': avatar procedural'))}
 
 /* ---------- Cámara, encuadre y gestos ---------- */
 let rotY=.35,vel=0,drag=false,lastX=0,p0=0,m0=1,zm=1,tgt=null;const ptr=new Map();
@@ -234,7 +257,7 @@ const T=Math.tan(Math.PI/12);
 /* ---------- Probar ahora ---------- */
 $('go').onclick=()=>{$('go').disabled=true;$('busy').classList.add('on');try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
  /* Producción: POST /tryon {avatar_id, prendas[]} → textura compuesta → recargar .glb */
- setTimeout(()=>{applyOutfit();$('busy').classList.remove('on');$('go').disabled=false},600)};
+ applyOutfit().catch(console.error).finally(()=>{$('busy').classList.remove('on');$('go').disabled=false})};
 
 /* ---------- Subida de prendas ---------- */
 const pop=$('pop');let pending=null,pcat='Vestidos';
@@ -243,24 +266,24 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pop,#cam'))po
 $('takeBtn').onclick=()=>{pop.classList.remove('on');$('fCam').click()};
 $('galBtn').onclick=()=>{pop.classList.remove('on');$('fGal').click()};
 [$('fCam'),$('fGal')].forEach(f=>f.onchange=()=>{if(f.files[0])handle(f.files[0]);f.value=''});
-const API_URL='http://localhost:8000'; // cambia por el dominio de tu FastAPI
+const API_URL=CFG.API_URL;
 async function handle(file){
  const img=await createImageBitmap(file).catch(()=>null);if(!img)return;
  const s=Math.min(1,900/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
  pending=null;$('addImg').src=c.toDataURL('image/jpeg',.8);$('addName').value='';drawCats();$('add').classList.add('on');
  $('addOk').disabled=true;$('addNote').textContent='Quitando el fondo…';
- let cut,note;
+ let cut,note,color;const origBlob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
  try{
-  const fd=new FormData();fd.append('file',await new Promise(r=>c.toBlob(r,'image/jpeg',.85)),'prenda.jpg');
+  const fd=new FormData();fd.append('file',origBlob,'prenda.jpg');
   const res=await fetch(API_URL+'/api/remove-background',{method:'POST',body:fd,signal:AbortSignal.timeout(30000)});
   if(!res.ok)throw new Error((await res.json().catch(()=>({}))).detail||res.status);
-  const bmp=await createImageBitmap(await res.blob());cut=document.createElement('canvas');cut.width=bmp.width;cut.height=bmp.height;cut.getContext('2d').drawImage(bmp,0,0);
+  color=res.headers.get('X-Dominant-Color');const bmp=await createImageBitmap(await res.blob());cut=document.createElement('canvas');cut.width=bmp.width;cut.height=bmp.height;cut.getContext('2d').drawImage(bmp,0,0);
   note='Prenda extraída con IA. Revisa el recorte antes de guardar.';
  }catch(e){cut=softCut(c);note='Sin conexión con el servicio de IA: se usó un recorte básico de demostración.'}
  const out=cropAlpha(cut);
  if(!out){$('addNote').textContent='No se detectó la prenda. Prueba con mejor luz y fondo liso.';return}
- pending={img:out.toDataURL('image/png'),canvas:out};$('addImg').src=pending.img;$('addNote').textContent=note;$('addOk').disabled=false}
+ pending={img:out.toDataURL('image/png'),canvas:out,orig:origBlob,color:color||dominant(out)};$('addImg').src=pending.img;$('addNote').textContent=note;$('addOk').disabled=false}
 /* Respaldo de demo (sin backend): quita el fondo parecido al de las esquinas, desde los bordes */
 function softCut(c){const x=c.getContext('2d'),W=c.width,H=c.height,im=x.getImageData(0,0,W,H),d=im.data;
  const cs=[0,W-1,(H-1)*W,H*W-1],bg=[0,1,2].map(k=>cs.reduce((a,i)=>a+d[i*4+k],0)/4);
@@ -275,8 +298,47 @@ function cropAlpha(c){const W=c.width,H=c.height,d=c.getContext('2d').getImageDa
  if(x1<=x0||y1<=y0)return null;const w=x1-x0+1,h=y1-y0+1,s=Math.min(1,512/Math.max(w,h)),o=document.createElement('canvas');o.width=Math.round(w*s);o.height=Math.round(h*s);
  o.getContext('2d').drawImage(c,x0,y0,w,h,0,0,o.width,o.height);return o}
 function drawCats(){const w=$('addCats');w.innerHTML='';Object.keys(KEY).forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=k;if(k===pcat)b.className='on';b.onclick=()=>{pcat=k;drawCats()};w.appendChild(b)})}
-$('addOk').onclick=()=>{if(!pending)return;ITEMS.push({id:'u'+Date.now(),name:$('addName').value.trim()||'Prenda nueva',cat:pcat,img:pending.img,canvas:pending.canvas});
- $('add').classList.remove('on');cat='Todo';drawTabs();refresh();$('list').scrollTo({left:1e5,top:1e5,behavior:'smooth'})};
+function dominant(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16)if(d[i+3]>200){r+=d[i];g+=d[i+1];b+=d[i+2];n++}n=n||1;return'#'+[r,g,b].map(v=>Math.round(v/n).toString(16).padStart(2,'0')).join('')}
+
+/* ---------- Persistencia: Supabase (nube, multi-dispositivo) o IndexedDB (solo este dispositivo) ---------- */
+const sb=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&window.supabase)?supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
+let user=null;const BUILTIN=ITEMS.length;
+const idb=new Promise(ok=>{try{const r=indexedDB.open('percha',1);r.onupgradeneeded=()=>r.result.createObjectStore('garments',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}catch(e){ok(null)}});
+const tx=async(mode,f)=>{const d=await idb;if(!d)return[];return new Promise(ok=>{const t=d.transaction('garments',mode),r=f(t.objectStore('garments'));t.oncomplete=()=>ok(r.result||[]);t.onerror=()=>ok([])})};
+async function loadWardrobe(){
+ ITEMS.slice(BUILTIN).forEach(i=>i.mesh&&root.remove(i.mesh));ITEMS.splice(BUILTIN);let rows=[];
+ try{if(sb&&user){const{data,error}=await sb.from('garments').select('*').order('created_at');if(error)throw error;
+   const paths=data.map(r=>r.cut_path),urls=paths.length?(await sb.storage.from('garments').createSignedUrls(paths,3600)).data:[];
+   rows=data.map((r,k)=>({id:r.id,name:r.name,cat:r.category,color:r.dominant_color,src:urls[k]&&urls[k].signedUrl}))}
+  else rows=(await tx('readonly',s=>s.getAll())).map(r=>({id:r.id,name:r.name,cat:r.cat,color:r.color,src:URL.createObjectURL(r.cut)}))}
+ catch(e){console.error(e)}
+ rows.filter(r=>r.src).forEach(r=>{r.img=r.src;ITEMS.push(r)});sel.clear();refresh();applyOutfit()}
+async function saveGarment(p){const id=crypto.randomUUID();
+ if(sb&&user){const bk=sb.storage.from('garments'),dir=user.id+'/'+id;
+  const[a,b]=await Promise.all([bk.upload(dir+'/original.jpg',p.orig,{contentType:'image/jpeg'}),bk.upload(dir+'/cut.png',p.cutBlob,{contentType:'image/png'})]);
+  if(a.error||b.error)throw a.error||b.error;
+  const{error}=await sb.from('garments').insert({id,name:p.name,category:p.cat,original_path:dir+'/original.jpg',cut_path:dir+'/cut.png',dominant_color:p.color});if(error)throw error}
+ else await tx('readwrite',s=>s.put({id,name:p.name,cat:p.cat,color:p.color,cut:p.cutBlob}));
+ return id}
+$('addOk').onclick=async()=>{if(!pending)return;const p=pending,btn=$('addOk');btn.disabled=true;btn.textContent='Guardando…';
+ try{const name=$('addName').value.trim()||'Prenda nueva',cutBlob=await new Promise(r=>p.canvas.toBlob(r,'image/png')),id=await saveGarment({name,cat:pcat,orig:p.orig,cutBlob,color:p.color});
+  ITEMS.push({id,name,cat:pcat,img:p.img,canvas:p.canvas,color:p.color});
+  $('add').classList.remove('on');cat='Todo';drawTabs();refresh();$('list').scrollTo({left:1e5,top:1e5,behavior:'smooth'})}
+ catch(e){console.error(e);$('addNote').textContent='No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.'}
+ btn.disabled=false;btn.textContent='Guardar en el armario'};
+
+/* ---------- Cuenta (enlace mágico por correo) ---------- */
+const acct=$('acct');
+function drawAcct(){$('acctS').textContent=!sb?'Sin servidor configurado: tu armario se guarda solo en este dispositivo.':user?'Sesión iniciada como '+user.email+'. Tu armario se sincroniza en tus dispositivos.':'Ingresa tu correo para sincronizar el armario entre el teléfono y la tablet.';
+ $('acctMail').style.display=$('acctIn').style.display=(sb&&!user)?'':'none';$('acctOut').style.display=user?'':'none'}
+$('acctBtn').onclick=()=>{drawAcct();acct.classList.add('on')};
+acct.addEventListener('click',e=>{if(e.target===acct)acct.classList.remove('on')});
+$('acctIn').onclick=async()=>{const email=$('acctMail').value.trim();if(!email)return;
+ const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+ $('acctS').textContent=error?'No se pudo enviar el enlace: '+error.message:'Te enviamos un enlace a '+email+'. Ábrelo en este dispositivo.'};
+$('acctOut').onclick=async()=>{await sb.auth.signOut();acct.classList.remove('on')};
+if(sb){sb.auth.onAuthStateChange((_e,ses)=>{const u=ses&&ses.user||null;if((u&&u.id)!==(user&&user.id)){user=u;loadWardrobe()}});
+ sb.auth.getSession().then(({data})=>{if(!data.session)loadWardrobe()})}else loadWardrobe();
 $('add').addEventListener('click',e=>{if(e.target===$('add'))$('add').classList.remove('on')});
 </script>
 </body>
